@@ -64,8 +64,6 @@ func debugHeaders(source *http.Header, direction string) {
 func pipeRequest(config *WatchdogConfig, w http.ResponseWriter, r *http.Request, method string) {
 	startTime := time.Now()
 
-	parts := strings.Split(config.faasProcess, " ")
-
 	ri := &requestInfo{}
 
 	if config.debugHeaders {
@@ -74,7 +72,13 @@ func pipeRequest(config *WatchdogConfig, w http.ResponseWriter, r *http.Request,
 
 	log.Println("Forking fprocess.")
 
-	targetCmd := exec.Command(parts[0], parts[1:]...)
+	targetCmd := exec.Command(`/usr/bin/qemu-system-x86_64`, 
+	`-fsdev`, `local,id=myid,path=/fs0,security_model=none`,
+	`-device`, `virtio-9p-pci,fsdev=myid,mount_tag=fs0,disable-modern=on,disable-legacy=off`,
+	`-kernel`, `/python3_kvm-x86_64`, 
+	`-append`, `"-- function.py test_input"`, 
+	`-m`, `1G`,
+	`-nographic`) 
 
 	envs := getAdditionalEnvs(config, r, method)
 	if len(envs) > 0 {
