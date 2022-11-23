@@ -72,28 +72,11 @@ func pipeRequest(config *WatchdogConfig, w http.ResponseWriter, r *http.Request,
 
 	log.Println("Forking fprocess.")
 
-	targetCmd := exec.Command(`/usr/bin/qemu-system-x86_64`, 
-	`-fsdev`, `local,id=myid,path=/fs0,security_model=none`,
-	`-device`, `virtio-9p-pci,fsdev=myid,mount_tag=fs0,disable-modern=on,disable-legacy=off`,
-	`-kernel`, `/python3_kvm-x86_64`, 
-	`-append`, `-- function.py`, 
-	`-m`, `1G`,
-	`-nographic`) 
-
-	envs := getAdditionalEnvs(config, r, method)
-	if len(envs) > 0 {
-		targetCmd.Env = envs
-	}
-
-	writer, _ := targetCmd.StdinPipe()
-
 	var out []byte
 	var err error
 	var requestBody []byte
 
 	var wg sync.WaitGroup
-
-	wgCount := 2
 
 	var buildInputErr error
 	requestBody, buildInputErr = buildFunctionInput(config, r)
@@ -113,7 +96,20 @@ func pipeRequest(config *WatchdogConfig, w http.ResponseWriter, r *http.Request,
 		return
 	}
 
-	wg.Add(wgCount)
+	targetCmd := exec.Command(`/usr/bin/qemu-system-x86_64`, 
+	`-fsdev`, `local,id=myid,path=/fs0,security_model=none`,
+	`-device`, `virtio-9p-pci,fsdev=myid,mount_tag=fs0,disable-modern=on,disable-legacy=off`,
+	`-kernel`, `/python3_kvm-x86_64`, 
+	`-append`, `-- function.py "`+string(requestBody)+`"`,  
+	`-m`, `1G`,
+	`-nographic`) 
+
+	envs := getAdditionalEnvs(config, r, method)
+	if len(envs) > 0 {
+		targetCmd.Env = envs
+	}
+
+	wg.Add(1)
 
 	var timer *time.Timer
 
@@ -133,13 +129,6 @@ func pipeRequest(config *WatchdogConfig, w http.ResponseWriter, r *http.Request,
 			}
 		})
 	}
-
-	// Write to pipe in separate go-routine to prevent blocking
-	go func() {
-		defer wg.Done()
-		writer.Write(requestBody)
-		writer.Close()
-	}()
 
 	if config.combineOutput {
 		// Read the output from stdout/stderr and combine into one variable for output.
