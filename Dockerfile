@@ -9,6 +9,6 @@ ARG BUILDPLATFORM
 ARG TARGETOS
 ARG TARGETARCH
 
-COPY --from=cache /fwatchdog-$TARGETARCH ./fwatchdog
+COPY --from=cache /fwatchdog-amd64 ./fwatchdog
 
 ENTRYPOINT ["/fwatchdog"]
