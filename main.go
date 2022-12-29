@@ -61,11 +61,6 @@ func main() {
 	readConfig := ReadConfig{}
 	config := readConfig.Read(osEnv)
 
-	if len(config.faasProcess) == 0 {
-		log.Panicln("Provide a valid process via fprocess environmental variable.")
-		return
-	}
-
 	readTimeout := config.readTimeout
 	writeTimeout := config.writeTimeout
 	healthcheckInterval := config.healthcheckInterval

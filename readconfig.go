@@ -62,8 +62,6 @@ func (ReadConfig) Read(hasEnv HasEnv) WatchdogConfig {
 		combineOutput: true,
 	}
 
-	cfg.faasProcess = hasEnv.Getenv("fprocess")
-
 	cfg.readTimeout = parseIntOrDurationValue(hasEnv.Getenv("read_timeout"), time.Second*5)
 	cfg.writeTimeout = parseIntOrDurationValue(hasEnv.Getenv("write_timeout"), time.Second*5)
 	cfg.healthcheckInterval = parseIntOrDurationValue(hasEnv.Getenv("healthcheck_interval"), cfg.writeTimeout)
