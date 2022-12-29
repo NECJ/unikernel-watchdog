@@ -12,11 +12,11 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
-	"strconv"
 
 	limiter "github.com/openfaas/faas-middleware/concurrency-limiter"
 
@@ -98,22 +98,23 @@ func pipeRequest(config *WatchdogConfig, w http.ResponseWriter, r *http.Request,
 	}
 
 	fo, err := os.Create("/watchdog_timings.txt")
-	
+
 	defer func() {
-        if err := fo.Close(); err != nil {
-            panic(err)
-        }
-    }()
+		if err := fo.Close(); err != nil {
+			panic(err)
+		}
+	}()
 
-	fo.Write([]byte("starting qemu: " + strconv.FormatInt(time.Now().UnixNano(), 10) + "\n"));
+	fo.Write([]byte("starting qemu: " + strconv.FormatInt(time.Now().UnixNano(), 10) + "\n"))
 
-	targetCmd := exec.Command(`/usr/bin/qemu-system-x86_64`, 
-	`-fsdev`, `local,id=myid,path=/fs0,security_model=none`,
-	`-device`, `virtio-9p-pci,fsdev=myid,mount_tag=fs0,disable-modern=on,disable-legacy=off`,
-	`-kernel`, `/python3_kvm-x86_64`, 
-	`-append`, `-- function.py "`+string(requestBody)+`"`,  
-	`-m`, `1G`,
-	`-nographic`)
+	targetCmd := exec.Command(`/usr/bin/qemu-system-x86_64`,
+		`-fsdev`, `local,id=myid,path=/fs0,security_model=none`,
+		`-device`, `virtio-9p-pci,fsdev=myid,mount_tag=fs0,disable-modern=on,disable-legacy=off`,
+		`-kernel`, `/python3_kvm-x86_64`,
+		`-append`, `-- function.py "`+string(requestBody)+`"`,
+		`-enable-kvm`,
+		`-m`, `1G`,
+		`-nographic`)
 
 	envs := getAdditionalEnvs(config, r, method)
 	if len(envs) > 0 {
@@ -206,7 +207,7 @@ func pipeRequest(config *WatchdogConfig, w http.ResponseWriter, r *http.Request,
 	}
 
 	execDuration := time.Since(startTime).Seconds()
-	fo.Write([]byte("done: " + strconv.FormatInt(time.Now().UnixNano(), 10) + "\n"));
+	fo.Write([]byte("done: " + strconv.FormatInt(time.Now().UnixNano(), 10) + "\n"))
 	if ri.headerWritten == false {
 		w.Header().Set("X-Duration-Seconds", fmt.Sprintf("%f", execDuration))
 		ri.headerWritten = true
