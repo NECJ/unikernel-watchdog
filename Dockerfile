@@ -1,14 +1,8 @@
-FROM scratch as cache
+FROM alpine:3.17
 
-COPY bin    .
+COPY bin/fwatchdog-amd64 ./fwatchdog
+RUN chmod +x /fwatchdog
 
-FROM scratch as ship
-
-ARG TARGETPLATFORM
-ARG BUILDPLATFORM
-ARG TARGETOS
-ARG TARGETARCH
-
-COPY --from=cache /fwatchdog-amd64 ./fwatchdog
+RUN apk add qemu-system-x86_64
 
 ENTRYPOINT ["/fwatchdog"]

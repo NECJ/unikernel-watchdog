@@ -107,14 +107,18 @@ func pipeRequest(config *WatchdogConfig, w http.ResponseWriter, r *http.Request,
 
 	fo.Write([]byte("starting qemu: " + strconv.FormatInt(time.Now().UnixNano(), 10) + "\n"))
 
-	targetCmd := exec.Command(`/usr/bin/qemu-system-x86_64`,
-		`-fsdev`, `local,id=myid,path=/fs0,security_model=none`,
+	args := []string{`-fsdev`, `local,id=myid,path=/fs0,security_model=none`,
 		`-device`, `virtio-9p-pci,fsdev=myid,mount_tag=fs0,disable-modern=on,disable-legacy=off`,
-		`-kernel`, `/python3_kvm-x86_64`,
-		`-append`, `-- function.py "`+string(requestBody)+`"`,
-		`-enable-kvm`,
-		`-m`, `1G`,
-		`-nographic`)
+		`-kernel`, os.Getenv("KERNEL_LOCATION"),
+		`-append`, os.Getenv("KERNEL_COMMAND_LINE")}
+
+	if os.Getenv("ENABLE_KVM") == "true" {
+		args = append(args, `-enable-kvm`)
+	}
+
+	args = append(args, `-m`, `1G`, `-nographic`)
+
+	targetCmd := exec.Command(`/usr/bin/qemu-system-x86_64`, args...)
 
 	envs := getAdditionalEnvs(config, r, method)
 	if len(envs) > 0 {
